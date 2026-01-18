@@ -1,10 +1,10 @@
 FROM node:25-alpine
 WORKDIR /app
 COPY . /app
-RUN npm install
-RUN apk add --no-cache build-base ca-certificates tzdata
+RUN apk add --no-cache build-base ca-certificates tzdata \
+    && npm install \
+    && npm run build
 EXPOSE 3000 4000 5000
 ENV NODE_ENV=development
-RUN npm run build
 USER root
 CMD ["node", "server.js"]
