@@ -153,3 +153,145 @@ Résultat :
 mon_nginx
 
 Le conteneur est supprimé afin de libérer les ressources et aussi pour pouvoir maintenir un environnement Docker propre.
+
+## Exercice 5 – Déploiement d'une application Python Flask
+
+### 1. Création de l’application Flask
+
+Fichier `app.py` :
+
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route("/")
+def hello_world():
+    return "Hello, World!"
+
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=5000)
+
+Cette application python expose une seule route qui renvoie le message "Hello, World!". De plus, l’option `host='0.0.0.0'` permet au conteneur d’être accessible depuis l’extérieur.
+
+### 2. Écriture du Dockerfile
+
+Dockerfile utilisé :
+
+FROM python:3.13
+WORKDIR /app
+RUN pip install flask
+COPY app.py .
+EXPOSE 5000
+CMD ["python", "app.py"]
+
+Explications :
+- `FROM python:3.13` : image officielle Python 3.13 comme base.
+- `WORKDIR /app` : définit le répertoire de travail dans le conteneur.
+- `RUN pip install flask` : installe Flask dans le conteneur.
+- `COPY app.py .` : copie le fichier Python dans le conteneur.
+- `EXPOSE 5000` : expose le port 5000 pour accéder à l’application.
+- `CMD ["python", "app.py"]` : commande de démarrage du conteneur.
+
+### 3. Construction de l’image Docker
+
+Commande utilisée :
+
+docker build -t tp_docker_exo5 .
+
+Résultat :
+
+[+] Building 32.3s (9/9) FINISHED
+...
+Successfully built tp_docker_exo5:latest
+
+L’image est créée et prête à être utilisée pour lancer un conteneur.
+
+### 4. Test de l’application
+
+Commande utilisée :
+
+docker images
+
+Résultat :
+
+IMAGE ID        DISK USAGE    CONTENT SIZE
+nginx:latest    228MB         62.6MB
+tp_docker_exo5  1.62GB        418MB
+
+Le conteneur fonctionne correctement et l’application Flask est accessible via le port 5000 (`http://localhost:5000`), elle affiche bien "Hello World !".
+
+---
+
+## Exercice 6 – Utilisation de Docker Compose
+
+### 1. Modification de l’application Flask
+
+Fichier `app.py` :
+
+from flask import Flask
+from pymongo import MongoClient
+
+app = Flask(__name__)
+client = MongoClient("mongodb://mongo:27017/")
+db = client.test_db
+
+@app.route("/")
+def hello_world():
+    return "Hello World! Connexion à Mongo DB"
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
+
+On ajoute une connexion à une base MongoDB pour simuler une application multi-services.
+
+### 2. Écriture du fichier Docker Compose
+
+Fichier `docker-compose.yml` :
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo
+    ports:
+      - "27017:27017"
+
+Explications :
+- `web` : conteneur de l’application Flask, construit à partir du Dockerfile local
+- `mongo` : conteneur MongoDB
+- `depends_on` : le serveur web dépends de MongoDB
+- `ports` : mappe les ports du conteneur vers la machine hôte
+
+### 3. Lancement avec Docker Compose
+
+Commande utilisée :
+
+docker compose up --build
+
+Résultat :
+
+[+] Building 38.8s (11/11) FINISHED
+...
+✔ tp1_docker-web Built 0.0s
+✔ Network tp1_docker_default Created 0.1s
+✔ Container tp1_docker-mongo-1 Created 0.2s
+✔ Container tp1_docker-web-1 Created 0.2s
+Attaching to mongo-1, web-1
+...
+
+> Le conteneur Flask (`web-1`) et MongoDB (`mongo-1`) sont démarrés correctement et reliés.
+
+### 4. Vérification du fonctionnement
+
+Commande pour lancer les conteneurs en arrière-plan :
+
+docker compose up -d
+
+Le site Flask est accessible via `http://localhost:5000` et renvoie :  
+`Hello World! Connexion à Mongo DB`  
+La connexion à MongoDB est effective et la communication entre les deux conteneurs fonctionne correctement.
