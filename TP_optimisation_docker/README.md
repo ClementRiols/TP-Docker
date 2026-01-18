@@ -5,24 +5,25 @@
 ### Fichiers de configuration
 
 `.gitignore` :
-node_modules/
+```node_modules/
 *.log
 .env
 .DS_Store
 Thumbs.db
+```
 
 
 `.dockerignore` :
-node_modules
+```node_modules
 .git
 .env
-
+```
 ---
 
 ## Étape 0 – Performance de base
 
 Dockerfile initial :
-FROM node:latest
+```dFROM node:latest
 WORKDIR /app
 COPY node_modules ./node_modules
 COPY . /app
@@ -33,6 +34,7 @@ ENV NODE_ENV=development
 RUN npm run build
 USER root
 CMD ["node", "server.js"]
+```
 
 
 Commandes :
@@ -56,7 +58,7 @@ Problèmes identifiés :
 ## Étape 1 – Application de .dockerignore
 
 Dockerfile :
-FROM node:latest
+```FROM node:latest
 WORKDIR /app
 COPY . /app
 RUN npm install
@@ -66,6 +68,7 @@ ENV NODE_ENV=development
 RUN npm run build
 USER root
 CMD ["node", "server.js"]
+```
 
 Suppression de `COPY node_modules ./node_modules` inutile grâce au `.dockerignore`
 
@@ -85,7 +88,7 @@ Gain de temps important mais l'’image de base reste très lourde
 ## Étape 2 – Utilisation d’une image plus légère
 
 Dockerfile :
-FROM node:25-alpine
+```FROM node:25-alpine
 WORKDIR /app
 COPY . /app
 RUN npm install
@@ -95,6 +98,7 @@ ENV NODE_ENV=development
 RUN npm run build
 USER root
 CMD ["node", "server.js"]
+```
 
 `node:25-alpine` est une image minimale, réduisant drastiquement la taille finale de notre image mais 
 
@@ -114,7 +118,7 @@ Le temps de build à un peu réaugmenté à cause de changement de certains run 
 ## Étape 3 – Fusion des RUN
 
 Dockerfile :
-FROM node:25-alpine
+```FROM node:25-alpine
 WORKDIR /app
 COPY . /app
 RUN apk add --no-cache build-base ca-certificates tzdata
@@ -124,6 +128,7 @@ EXPOSE 3000 4000 5000
 ENV NODE_ENV=development
 USER root
 CMD ["node", "server.js"]
+```
 
 Fusion des `RUN` en une seule couche pour réduire le nombre de couches Docker
 
@@ -143,7 +148,7 @@ La taille est logiquement inchangé. Par contre, nous n'avons pas constater d'am
 ## Étape 4 – Optimisation des COPY
 
 Dockerfile :
-FROM node:25-alpine
+```FROM node:25-alpine
 WORKDIR /app
 COPY package*.json ./
 RUN apk add --no-cache build-base ca-certificates tzdata
@@ -154,6 +159,7 @@ EXPOSE 3000 4000 5000
 ENV NODE_ENV=development
 USER root
 CMD ["node", "server.js"]
+```
 
 Copie séparée de `package*.json` avant le reste du code pour une meilleure optimisation
 
@@ -173,7 +179,7 @@ Réduction des temps de rebuild si jamais les dépendances ne changent pas
 ## Étape 5 – Multi-stage build et nettoyage final
 
 Dockerfile :
-FROM node:25-alpine AS builder
+```FROM node:25-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN apk add --no-cache build-base ca-certificates tzdata
@@ -189,6 +195,7 @@ EXPOSE 3000
 ENV NODE_ENV=production
 USER root
 CMD ["node", "dist/server.js"]
+```
 
  `EXPOSE 3000` unique et `NODE_ENV=production` pour une configuration propre et minimale
 Multi-stage build : la construction et les dépendances lourdes restent dans la phase `builder` et ne sont pas copiées dans l’image finale
